@@ -1,0 +1,21 @@
+FROM docker.io/library/python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements.txt /app/requirements.txt
+
+RUN pip install \
+    --no-cache-dir \
+    --disable-pip-version-check \
+    -r /app/requirements.txt
+
+COPY src /app/src
+
+RUN mkdir -p \
+    /app/data/staging \
+    /app/manifests
+
+ENTRYPOINT ["python", "/app/src/main.py"]

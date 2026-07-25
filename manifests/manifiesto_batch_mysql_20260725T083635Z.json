@@ -1,0 +1,117 @@
+{
+  "version_manifiesto": "1.1",
+  "tipo_ingesta": "batch",
+  "motor_origen": "mysql",
+  "id_ejecucion": "20260725T083635Z",
+  "fecha_inicio_utc": "2026-07-25T08:36:35.046624+00:00",
+  "fecha_fin_utc": "2026-07-25T08:36:35.613057+00:00",
+  "estado": "OK",
+  "tablas_con_error": [],
+  "cantidad_tablas": 5,
+  "filas_totales_origen": 20610,
+  "filas_totales_exportadas": 20610,
+  "resultados": [
+    {
+      "tabla": "sucursales",
+      "clave_ordenamiento": "sucursal_id",
+      "filas_origen": 10,
+      "filas_exportadas": 10,
+      "columnas": [
+        "sucursal_id",
+        "nombre",
+        "ciudad",
+        "activa"
+      ],
+      "archivo_local": "/app/data/staging/mysql/20260725T083635Z/sucursales.csv",
+      "archivo_hdfs": "/data/raw/batch/mysql/sucursales/fecha_carga=2026-07-25/id_ejecucion=20260725T083635Z/sucursales.csv",
+      "tamano_bytes": 295,
+      "sha256": "8be16921c303eb7afeb09bfed1a1699fd0e3831b4d3680e8d1e0aaf697b16a3d",
+      "estado": "OK",
+      "duracion_segundos": 0.057,
+      "error": null
+    },
+    {
+      "tabla": "clientes",
+      "clave_ordenamiento": "cliente_id",
+      "filas_origen": 500,
+      "filas_exportadas": 500,
+      "columnas": [
+        "cliente_id",
+        "nombre",
+        "correo",
+        "fecha_registro",
+        "estado"
+      ],
+      "archivo_local": "/app/data/staging/mysql/20260725T083635Z/clientes.csv",
+      "archivo_hdfs": "/data/raw/batch/mysql/clientes/fecha_carga=2026-07-25/id_ejecucion=20260725T083635Z/clientes.csv",
+      "tamano_bytes": 27373,
+      "sha256": "bdcdfe67289a853a4f72c711a09f2307ce6475aedd33fd723fabb5734c799cf1",
+      "estado": "OK",
+      "duracion_segundos": 0.065,
+      "error": null
+    },
+    {
+      "tabla": "productos",
+      "clave_ordenamiento": "producto_id",
+      "filas_origen": 100,
+      "filas_exportadas": 100,
+      "columnas": [
+        "producto_id",
+        "nombre",
+        "categoria",
+        "precio",
+        "stock",
+        "activo"
+      ],
+      "archivo_local": "/app/data/staging/mysql/20260725T083635Z/productos.csv",
+      "archivo_hdfs": "/data/raw/batch/mysql/productos/fecha_carga=2026-07-25/id_ejecucion=20260725T083635Z/productos.csv",
+      "tamano_bytes": 4143,
+      "sha256": "bd503161f266e5265fde67bfe32e56c4f889b6e2a165a13a91c16bd5c278eaaf",
+      "estado": "OK",
+      "duracion_segundos": 0.067,
+      "error": null
+    },
+    {
+      "tabla": "ventas",
+      "clave_ordenamiento": "venta_id",
+      "filas_origen": 5000,
+      "filas_exportadas": 5000,
+      "columnas": [
+        "venta_id",
+        "cliente_id",
+        "sucursal_id",
+        "fecha_venta",
+        "estado",
+        "total"
+      ],
+      "archivo_local": "/app/data/staging/mysql/20260725T083635Z/ventas.csv",
+      "archivo_hdfs": "/data/raw/batch/mysql/ventas/fecha_carga=2026-07-25/id_ejecucion=20260725T083635Z/ventas.csv",
+      "tamano_bytes": 234186,
+      "sha256": "92987427828e9bb4b8932443405eb7ffc2f31ae72433667395a6ce10feab00c4",
+      "estado": "OK",
+      "duracion_segundos": 0.165,
+      "error": null
+    },
+    {
+      "tabla": "detalle_ventas",
+      "clave_ordenamiento": "detalle_id",
+      "filas_origen": 15000,
+      "filas_exportadas": 15000,
+      "columnas": [
+        "detalle_id",
+        "venta_id",
+        "producto_id",
+        "cantidad",
+        "precio_unitario",
+        "subtotal"
+      ],
+      "archivo_local": "/app/data/staging/mysql/20260725T083635Z/detalle_ventas.csv",
+      "archivo_hdfs": "/data/raw/batch/mysql/detalle_ventas/fecha_carga=2026-07-25/id_ejecucion=20260725T083635Z/detalle_ventas.csv",
+      "tamano_bytes": 480189,
+      "sha256": "5b1f2e2089210c187953d0fb26f27ff1ca1901cfb41c9edb7c6ea9574490419f",
+      "estado": "OK",
+      "duracion_segundos": 0.196,
+      "error": null
+    }
+  ]
+}

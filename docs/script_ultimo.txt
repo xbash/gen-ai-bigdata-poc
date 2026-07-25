@@ -1,0 +1,80 @@
+
+C:\rutinas-local\gen-ai-app\bigdata-poc> foreach ($Motor in $Motores) {
+>>     Write-Host ""
+>>     Write-Host "=== MOTOR: $Motor ==="
+>> 
+>>     $script = @"
+>>       for TABLA in sucursales clientes productos ventas detalle_ventas
+>>       do
+>>         ARCHIVO=\$(hdfs dfs -ls -R /data/raw/batch/$Motor/\${TABLA} 2>/dev/null |
+>>           awk -v tabla="\${TABLA}.csv" '\$NF ~ tabla"$" {print \$NF}' |
+>>           tail -1)
+>> 
+>>         if [ -n "\${ARCHIVO}" ]; then
+>>           LINEAS=\$(hdfs dfs -cat "\${ARCHIVO}" | wc -l)
+>>           echo "\${TABLA}|\$((LINEAS - 1))"
+>>         else
+>>           echo "\${TABLA}|0 (No encontrado)"
+>>         fi
+>>       done
+>> "@
+>> 
+>>     $script | podman exec -i bigdata-hdfs-namenode bash -s
+>> }
+
+=== MOTOR: postgresql ===
+hdfs : El término 'hdfs' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es correcta e 
+inténtelo de nuevo.
+En línea: 8 Carácter: 20
++         ARCHIVO=\$(hdfs dfs -ls -R /data/raw/batch/$Motor/\${TABLA} 2 ...
++                    ~~~~
+    + CategoryInfo          : ObjectNotFound: (hdfs:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+hdfs : El término 'hdfs' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es correcta e 
+inténtelo de nuevo.
+En línea: 13 Carácter: 21
++           LINEAS=\$(hdfs dfs -cat "\${ARCHIVO}" | wc -l)
++                     ~~~~
+    + CategoryInfo          : ObjectNotFound: (hdfs:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+LINEAS : El término 'LINEAS' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es 
+correcta e inténtelo de nuevo.
+En línea: 14 Carácter: 31
++           echo "\${TABLA}|\$((LINEAS - 1))"
++                               ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (LINEAS:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+bash: line 8: syntax error near unexpected token `else'
+bash: line 8: `        else'
+
+=== MOTOR: mysql ===
+hdfs : El término 'hdfs' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es correcta e 
+inténtelo de nuevo.
+En línea: 8 Carácter: 20
++         ARCHIVO=\$(hdfs dfs -ls -R /data/raw/batch/$Motor/\${TABLA} 2 ...
++                    ~~~~
+    + CategoryInfo          : ObjectNotFound: (hdfs:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+hdfs : El término 'hdfs' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es correcta e 
+inténtelo de nuevo.
+En línea: 13 Carácter: 21
++           LINEAS=\$(hdfs dfs -cat "\${ARCHIVO}" | wc -l)
++                     ~~~~
+    + CategoryInfo          : ObjectNotFound: (hdfs:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+LINEAS : El término 'LINEAS' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable. Compruebe si escribió correctamente el nombre o, si incluyó una ruta de acceso, compruebe que dicha ruta es 
+correcta e inténtelo de nuevo.
+En línea: 14 Carácter: 31
++           echo "\${TABLA}|\$((LINEAS - 1))"
++                               ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (LINEAS:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+bash: line 8: syntax error near unexpected token `else'
+bash: line 8: `        else'
+PS C:\rutinas-local\gen-ai-app\bigdata-poc>

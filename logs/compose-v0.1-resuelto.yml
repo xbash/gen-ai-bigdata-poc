@@ -1,0 +1,307 @@
+﻿name: bigdata-poc
+services:
+  datanode1:
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "[INFO] Preparando directorio del DataNode 1..."
+        mkdir -p /tmp/hadoop-root/dfs/data
+
+        echo "[INFO] Esperando disponibilidad del NameNode..."
+        until bash -c "echo > /dev/tcp/namenode/8020" 2>/dev/null; do
+          sleep 3
+        done
+
+        echo "[INFO] Iniciando DataNode 1..."
+        exec hdfs datanode
+    container_name: bigdata-hdfs-datanode1
+    depends_on:
+      namenode:
+        condition: service_started
+        required: true
+    environment:
+      CORE-SITE.XML_fs.defaultFS: hdfs://namenode:8020
+      HDFS-SITE.XML_dfs.datanode.data.dir: file:///tmp/hadoop-root/dfs/data
+      HDFS-SITE.XML_dfs.namenode.datanode.registration.ip-hostname-check: "false"
+      HDFS-SITE.XML_dfs.namenode.name.dir: file:///tmp/hadoop-root/dfs/name
+      HDFS-SITE.XML_dfs.namenode.rpc-address: namenode:8020
+      HDFS-SITE.XML_dfs.permissions.enabled: "false"
+      HDFS-SITE.XML_dfs.replication: "2"
+      HDFS-SITE.XML_dfs.webhdfs.enabled: "true"
+    hostname: datanode1
+    image: docker.io/apache/hadoop:3.5.0
+    networks:
+      bigdata_net: null
+    ports:
+      - mode: ingress
+        target: 9864
+        published: "9864"
+        protocol: tcp
+    restart: unless-stopped
+    user: '0:0'
+    volumes:
+      - type: volume
+        source: hdfs_datanode1_data
+        target: /tmp/hadoop-root/dfs/data
+        volume: {}
+  datanode2:
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "[INFO] Preparando directorio del DataNode 2..."
+        mkdir -p /tmp/hadoop-root/dfs/data
+
+        echo "[INFO] Esperando disponibilidad del NameNode..."
+        until bash -c "echo > /dev/tcp/namenode/8020" 2>/dev/null; do
+          sleep 3
+        done
+
+        echo "[INFO] Iniciando DataNode 2..."
+        exec hdfs datanode
+    container_name: bigdata-hdfs-datanode2
+    depends_on:
+      namenode:
+        condition: service_started
+        required: true
+    environment:
+      CORE-SITE.XML_fs.defaultFS: hdfs://namenode:8020
+      HDFS-SITE.XML_dfs.datanode.data.dir: file:///tmp/hadoop-root/dfs/data
+      HDFS-SITE.XML_dfs.namenode.datanode.registration.ip-hostname-check: "false"
+      HDFS-SITE.XML_dfs.namenode.name.dir: file:///tmp/hadoop-root/dfs/name
+      HDFS-SITE.XML_dfs.namenode.rpc-address: namenode:8020
+      HDFS-SITE.XML_dfs.permissions.enabled: "false"
+      HDFS-SITE.XML_dfs.replication: "2"
+      HDFS-SITE.XML_dfs.webhdfs.enabled: "true"
+    hostname: datanode2
+    image: docker.io/apache/hadoop:3.5.0
+    networks:
+      bigdata_net: null
+    ports:
+      - mode: ingress
+        target: 9864
+        published: "9865"
+        protocol: tcp
+    restart: unless-stopped
+    user: '0:0'
+    volumes:
+      - type: volume
+        source: hdfs_datanode2_data
+        target: /tmp/hadoop-root/dfs/data
+        volume: {}
+  ingesta-batch-mysql:
+    container_name: bigdata-ingesta-batch-mysql
+    depends_on:
+      datanode1:
+        condition: service_started
+        required: true
+      datanode2:
+        condition: service_started
+        required: true
+      mysql:
+        condition: service_healthy
+        required: true
+      namenode:
+        condition: service_started
+        required: true
+    environment:
+      DB_HOST: mysql
+      DB_NAME: ventas
+      DB_PASSWORD: BigData_MySQL_PoC_2026
+      DB_PORT: "3306"
+      DB_USER: bigdata
+      HDFS_USER: root
+      MOTOR_ORIGEN: mysql
+      WEBHDFS_URL: http://namenode:9870
+    image: localhost/bigdata-poc-ingesta-batch:0.2
+    networks:
+      bigdata_net: null
+    restart: 'no'
+    volumes:
+      - type: bind
+        source: C:\rutinas-local\gen-ai-app\bigdata-poc\data\staging
+        target: /app/data/staging
+        bind: {}
+      - type: bind
+        source: C:\rutinas-local\gen-ai-app\bigdata-poc\manifests
+        target: /app/manifests
+        bind: {}
+  ingesta-batch-postgresql:
+    build:
+      context: C:\rutinas-local\gen-ai-app\bigdata-poc\ingestion\batch
+      dockerfile: Containerfile
+    container_name: bigdata-ingesta-batch-postgresql
+    depends_on:
+      datanode1:
+        condition: service_started
+        required: true
+      datanode2:
+        condition: service_started
+        required: true
+      namenode:
+        condition: service_started
+        required: true
+      postgresql:
+        condition: service_healthy
+        required: true
+    environment:
+      DB_HOST: postgresql
+      DB_NAME: ventas
+      DB_PASSWORD: BigData_PoC_2026
+      DB_PORT: "5432"
+      DB_USER: bigdata
+      HDFS_USER: root
+      MOTOR_ORIGEN: postgresql
+      WEBHDFS_URL: http://namenode:9870
+    image: localhost/bigdata-poc-ingesta-batch:0.2
+    networks:
+      bigdata_net: null
+    restart: 'no'
+    volumes:
+      - type: bind
+        source: C:\rutinas-local\gen-ai-app\bigdata-poc\data\staging
+        target: /app/data/staging
+        bind: {}
+      - type: bind
+        source: C:\rutinas-local\gen-ai-app\bigdata-poc\manifests
+        target: /app/manifests
+        bind: {}
+  mysql:
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    container_name: bigdata-mysql
+    environment:
+      MYSQL_DATABASE: ventas
+      MYSQL_PASSWORD: BigData_MySQL_PoC_2026
+      MYSQL_ROOT_PASSWORD: Root_MySQL_PoC_2026
+      MYSQL_USER: bigdata
+    hostname: mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h localhost -u root -p"$${MYSQL_ROOT_PASSWORD}" --silent
+      timeout: 5s
+      interval: 10s
+      retries: 20
+      start_period: 40s
+    image: docker.io/library/mysql:8.4
+    networks:
+      bigdata_net: null
+    ports:
+      - mode: ingress
+        target: 3306
+        published: "3306"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: mysql_data
+        target: /var/lib/mysql
+        volume: {}
+      - type: bind
+        source: C:\rutinas-local\gen-ai-app\bigdata-poc\database\mysql\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  namenode:
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "[INFO] Preparando directorio del NameNode..."
+        mkdir -p /tmp/hadoop-root/dfs/name
+
+        if [ ! -f /tmp/hadoop-root/dfs/name/current/VERSION ]; then
+          echo "[INFO] Formateando NameNode por primera vez..."
+          hdfs namenode -format \
+            -force \
+            -nonInteractive \
+            -clusterId bigdata-poc-cluster
+        else
+          echo "[INFO] El NameNode ya est├í formateado."
+        fi
+
+        echo "[INFO] Iniciando NameNode..."
+        exec hdfs namenode
+    container_name: bigdata-hdfs-namenode
+    environment:
+      CORE-SITE.XML_fs.defaultFS: hdfs://namenode:8020
+      HDFS-SITE.XML_dfs.datanode.data.dir: file:///tmp/hadoop-root/dfs/data
+      HDFS-SITE.XML_dfs.namenode.datanode.registration.ip-hostname-check: "false"
+      HDFS-SITE.XML_dfs.namenode.name.dir: file:///tmp/hadoop-root/dfs/name
+      HDFS-SITE.XML_dfs.namenode.rpc-address: namenode:8020
+      HDFS-SITE.XML_dfs.permissions.enabled: "false"
+      HDFS-SITE.XML_dfs.replication: "2"
+      HDFS-SITE.XML_dfs.webhdfs.enabled: "true"
+    hostname: namenode
+    image: docker.io/apache/hadoop:3.5.0
+    networks:
+      bigdata_net: null
+    ports:
+      - mode: ingress
+        target: 9870
+        published: "9870"
+        protocol: tcp
+    restart: unless-stopped
+    user: '0:0'
+    volumes:
+      - type: volume
+        source: hdfs_namenode_data
+        target: /tmp/hadoop-root/dfs/name
+        volume: {}
+  postgresql:
+    container_name: bigdata-postgresql
+    environment:
+      POSTGRES_DB: ventas
+      POSTGRES_PASSWORD: BigData_PoC_2026
+      POSTGRES_USER: bigdata
+    hostname: postgresql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U bigdata -d ventas
+      timeout: 5s
+      interval: 10s
+      retries: 10
+      start_period: 20s
+    image: docker.io/library/postgres:17
+    networks:
+      bigdata_net: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\rutinas-local\gen-ai-app\bigdata-poc\database\postgresql\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+networks:
+  bigdata_net:
+    name: bigdata_net
+volumes:
+  hdfs_datanode1_data:
+    name: bigdata_hdfs_datanode1_data
+  hdfs_datanode2_data:
+    name: bigdata_hdfs_datanode2_data
+  hdfs_namenode_data:
+    name: bigdata_hdfs_namenode_data
+  mysql_data:
+    name: bigdata_mysql_data
+  postgres_data:
+    name: bigdata_postgres_data

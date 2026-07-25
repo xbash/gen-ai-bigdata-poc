@@ -1,0 +1,11 @@
+sucursal_id,nombre,ciudad,activa
+1,Sucursal 1,Santiago,True
+2,Sucursal 2,Santiago,True
+3,Sucursal 3,Santiago,True
+4,Sucursal 4,Valparaíso,True
+5,Sucursal 5,Valparaíso,True
+6,Sucursal 6,Concepción,True
+7,Sucursal 7,Concepción,True
+8,Sucursal 8,Rancagua,True
+9,Sucursal 9,Rancagua,True
+10,Sucursal 10,Rancagua,True

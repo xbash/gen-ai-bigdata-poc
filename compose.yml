@@ -1,0 +1,299 @@
+name: bigdata-poc
+
+services:
+  ingesta-batch-postgresql:
+    build:
+      context: ./ingestion/batch
+      dockerfile: Containerfile
+
+    image: localhost/bigdata-poc-ingesta-batch:0.2
+    container_name: bigdata-ingesta-batch-postgresql
+    restart: "no"
+
+    environment:
+      MOTOR_ORIGEN: postgresql
+
+      DB_HOST: postgresql
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      WEBHDFS_URL: http://namenode:9870
+      HDFS_USER: root
+
+    volumes:
+      - ./data/staging:/app/data/staging
+      - ./manifests:/app/manifests
+
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      namenode:
+        condition: service_started
+      datanode1:
+        condition: service_started
+      datanode2:
+        condition: service_started
+
+    networks:
+      - bigdata_net
+
+
+  ingesta-batch-mysql:
+    image: localhost/bigdata-poc-ingesta-batch:0.2
+    container_name: bigdata-ingesta-batch-mysql
+    restart: "no"
+
+    environment:
+      MOTOR_ORIGEN: mysql
+
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+
+      WEBHDFS_URL: http://namenode:9870
+      HDFS_USER: root
+
+    volumes:
+      - ./data/staging:/app/data/staging
+      - ./manifests:/app/manifests
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      namenode:
+        condition: service_started
+      datanode1:
+        condition: service_started
+      datanode2:
+        condition: service_started
+
+    networks:
+      - bigdata_net
+
+  mysql:
+    image: docker.io/library/mysql:8.4
+    container_name: bigdata-mysql
+    hostname: mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    ports:
+      - "${MYSQL_PORT}:3306"
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/mysql/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h localhost -u root -p"$${MYSQL_ROOT_PASSWORD}" --silent
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+    networks:
+      - bigdata_net
+
+  # =========================================================
+  # FUENTE: POSTGRESQL
+  # =========================================================
+  postgresql:
+    image: docker.io/library/postgres:17
+    container_name: bigdata-postgresql
+    hostname: postgresql
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgresql/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - bigdata_net
+
+
+  # =========================================================
+  # HDFS: NAMENODE
+  # =========================================================
+  namenode:
+    image: docker.io/apache/hadoop:3.5.0
+    container_name: bigdata-hdfs-namenode
+    hostname: namenode
+    restart: unless-stopped
+
+    user: "0:0"
+
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "[INFO] Preparando directorio del NameNode..."
+        mkdir -p /tmp/hadoop-root/dfs/name
+
+        if [ ! -f /tmp/hadoop-root/dfs/name/current/VERSION ]; then
+          echo "[INFO] Formateando NameNode por primera vez..."
+          hdfs namenode -format \
+            -force \
+            -nonInteractive \
+            -clusterId bigdata-poc-cluster
+        else
+          echo "[INFO] El NameNode ya está formateado."
+        fi
+
+        echo "[INFO] Iniciando NameNode..."
+        exec hdfs namenode
+
+    env_file:
+      - ./config/hadoop/hadoop.env
+
+    ports:
+      - "9870:9870"
+
+    volumes:
+      - hdfs_namenode_data:/tmp/hadoop-root/dfs/name
+
+    networks:
+      - bigdata_net
+
+
+  # =========================================================
+  # HDFS: DATANODE 1
+  # =========================================================
+  datanode1:
+    image: docker.io/apache/hadoop:3.5.0
+    container_name: bigdata-hdfs-datanode1
+    hostname: datanode1
+    restart: unless-stopped
+
+    user: "0:0"
+
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "[INFO] Preparando directorio del DataNode 1..."
+        mkdir -p /tmp/hadoop-root/dfs/data
+
+        echo "[INFO] Esperando disponibilidad del NameNode..."
+        until bash -c "echo > /dev/tcp/namenode/8020" 2>/dev/null; do
+          sleep 3
+        done
+
+        echo "[INFO] Iniciando DataNode 1..."
+        exec hdfs datanode
+
+    env_file:
+      - ./config/hadoop/hadoop.env
+
+    depends_on:
+      - namenode
+
+    ports:
+      - "9864:9864"
+
+    volumes:
+      - hdfs_datanode1_data:/tmp/hadoop-root/dfs/data
+
+    networks:
+      - bigdata_net
+
+
+  # =========================================================
+  # HDFS: DATANODE 2
+  # =========================================================
+  datanode2:
+    image: docker.io/apache/hadoop:3.5.0
+    container_name: bigdata-hdfs-datanode2
+    hostname: datanode2
+    restart: unless-stopped
+
+    user: "0:0"
+
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+
+        echo "[INFO] Preparando directorio del DataNode 2..."
+        mkdir -p /tmp/hadoop-root/dfs/data
+
+        echo "[INFO] Esperando disponibilidad del NameNode..."
+        until bash -c "echo > /dev/tcp/namenode/8020" 2>/dev/null; do
+          sleep 3
+        done
+
+        echo "[INFO] Iniciando DataNode 2..."
+        exec hdfs datanode
+
+    env_file:
+      - ./config/hadoop/hadoop.env
+
+    depends_on:
+      - namenode
+
+    ports:
+      - "9865:9864"
+
+    volumes:
+      - hdfs_datanode2_data:/tmp/hadoop-root/dfs/data
+
+    networks:
+      - bigdata_net
+
+
+volumes:
+  mysql_data:
+    name: bigdata_mysql_data
+
+  postgres_data:
+    name: bigdata_postgres_data
+
+  hdfs_namenode_data:
+    name: bigdata_hdfs_namenode_data
+
+  hdfs_datanode1_data:
+    name: bigdata_hdfs_datanode1_data
+
+  hdfs_datanode2_data:
+    name: bigdata_hdfs_datanode2_data
+
+
+networks:
+  bigdata_net:
+    name: bigdata_net
